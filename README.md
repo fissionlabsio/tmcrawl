@@ -9,8 +9,9 @@ from those seeds. When there are no nodes left to crawl, `tmcrawl` will pick a r
 node from the known list of nodes to reseed the crawl every `crawl_interval` seconds
 from the last attempted crawl finish.
 
-Nodes will also be periodically checked every `recheck_interval`. If any node cannot
-be reached, it'll be removed from the known set of nodes.
+Nodes are persisted in a key/value embedded database, by default BadgerDB. Saved
+nodes will also be periodically checked every `recheck_interval`. If any node
+cannot be reached, it'll be removed from the known set of nodes.
 
 Note, `tmcrawl` is a Tendermint p2p network crawler, it does not operate as a seed
 node or any other type of node. However, it can be used to gather a set of peers.
