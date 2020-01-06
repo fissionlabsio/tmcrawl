@@ -27,7 +27,7 @@ func NewCrawler(cfg config.Config, db db.DB) *Crawler {
 		seeds:           cfg.Seeds,
 		crawlInterval:   cfg.CrawlInterval,
 		recheckInterval: cfg.RecheckInterval,
-		pool:            NewNodePool(),
+		pool:            NewNodePool(cfg.ReseedSize),
 		ipClient:        ipstack.NewClient(cfg.IPStackKey, false, 5),
 	}
 }
@@ -53,7 +53,7 @@ func (c *Crawler) Crawl() {
 
 		log.Info().Uint("duration", c.crawlInterval).Msg("waiting until next crawl attempt...")
 		time.Sleep(time.Duration(c.crawlInterval) * time.Second)
-		// TODO: Add a random node to the pool.
+		c.pool.Reseed()
 	}
 }
 

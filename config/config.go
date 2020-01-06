@@ -21,6 +21,7 @@ var (
 	defaultListenAddr           = "0.0.0.0:27758"
 	defaultCrawlInterval   uint = 15
 	defaultRecheckInterval uint = 43200
+	defaultReseedSize      uint = 100
 )
 
 // Config defines all necessary tmcrawl configuration parameters.
@@ -28,6 +29,7 @@ type Config struct {
 	DataDir    string   `toml:"data_dir"`
 	ListenAddr string   `toml:"listen_addr"`
 	Seeds      []string `toml:"seeds"`
+	ReseedSize uint     `toml:"reseed_size"`
 	IPStackKey string   `toml:"ipstack_key"`
 
 	CrawlInterval   uint `toml:"crawl_interval"`
@@ -60,6 +62,9 @@ func ParseConfig(configPath string) (Config, error) {
 	}
 	if cfg.ListenAddr == "" {
 		cfg.ListenAddr = defaultListenAddr
+	}
+	if cfg.ReseedSize == 0 {
+		cfg.ReseedSize = defaultReseedSize
 	}
 	if cfg.CrawlInterval == 0 {
 		cfg.CrawlInterval = defaultCrawlInterval
