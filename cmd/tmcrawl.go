@@ -31,8 +31,11 @@ var rootCmd = &cobra.Command{
 	Use:   "tmcrawl [config-file]",
 	Args:  cobra.ExactArgs(1),
 	Short: "tmcrawl implements a Tendermint p2p network crawler utility and API.",
-	Long:  `TODO`,
-	RunE:  tmcrawlCmdHandler,
+	Long: `tmcrawl implements a Tendermint p2p network crawler utility and API.
+
+The utility will capture geolocation information and node metadata such as network
+name, node version, RPC information, and node ID for each crawled node.`,
+	RunE: tmcrawlCmdHandler,
 }
 
 func init() {
@@ -93,7 +96,7 @@ func tmcrawlCmdHandler(cmd *cobra.Command, args []string) error {
 
 	// create HTTP router and mount routes
 	router := mux.NewRouter()
-	server.RegisterRoutes(router)
+	server.RegisterRoutes(db, router)
 
 	srv := &http.Server{
 		Handler:      router,
