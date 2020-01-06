@@ -1,6 +1,7 @@
 package db
 
 import (
+	"bytes"
 	"fmt"
 	"path/filepath"
 
@@ -18,6 +19,7 @@ type (
 		Has(key []byte) bool
 		Set(key, value []byte) error
 		Delete(key []byte) error
+		IteratePrefix(prefix []byte, cb func(k, v []byte) bool)
 		Close() error
 	}
 
@@ -85,6 +87,24 @@ func (bdb *BoltDB) Delete(key []byte) error {
 	return bdb.db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(nodesBucket)
 		return b.Delete(key)
+	})
+}
+
+// IteratePrefix iterates over a series of key/value pairs where each key contains
+// the provided prefix. For each key/value pair, a cb function is invoked. If
+// cb returns true, iteration is halted.
+func (bdb *BoltDB) IteratePrefix(prefix []byte, cb func(k, v []byte) bool) {
+	_ = bdb.db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket(nodesBucket)
+		c := b.Cursor()
+
+		for k, v := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, v = c.Next() {
+			if cb(k, v) {
+				return nil
+			}
+		}
+
+		return nil
 	})
 }
 
