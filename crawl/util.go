@@ -10,9 +10,7 @@ import (
 	libclient "github.com/tendermint/tendermint/rpc/lib/client"
 )
 
-var (
-	clientTimeout = 2 * time.Second
-)
+var clientTimeout = 2 * time.Second
 
 func newRPCClient(remote string) *rpcclient.HTTP {
 	httpClient := libclient.DefaultHTTPClient(remote)

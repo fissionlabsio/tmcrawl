@@ -6,6 +6,9 @@ import (
 	"github.com/vmihailenco/msgpack/v4"
 )
 
+// NodeKeyPrefix defines the DB prefix under which nodes are persisted.
+var NodeKeyPrefix = []byte("node/")
+
 type (
 	// Node represents a full-node in a Tendermint-based network that contains
 	// relevant p2p data.
@@ -16,7 +19,7 @@ type (
 		ID       string    `json:"id" yaml:"id"`
 		Network  string    `json:"network" yaml:"network"`
 		Version  string    `json:"version" yaml:"version"`
-		TxIndex  bool      `json:"tx_index" yaml:"tx_index"`
+		TxIndex  string    `json:"tx_index" yaml:"tx_index"`
 		LastSync time.Time `json:"last_sync" yaml:"last_sync"`
 		Location Location  `json:"location" yaml:"location"`
 	}
@@ -48,4 +51,9 @@ func (n *Node) Unmarshal(bz []byte) error {
 	}
 
 	return nil
+}
+
+// NodeKey constructs the DB key for node persistence.
+func NodeKey(nodeAddr string) []byte {
+	return append(NodeKeyPrefix, []byte(nodeAddr)...)
 }

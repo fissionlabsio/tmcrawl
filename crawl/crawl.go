@@ -94,7 +94,7 @@ func (c *Crawler) CrawlNode(nodeAddr string) {
 		ID:       string(status.NodeInfo.ID()),
 		Network:  status.NodeInfo.Network,
 		Version:  status.NodeInfo.Version,
-		TxIndex:  status.SyncInfo.CatchingUp,
+		TxIndex:  status.NodeInfo.Other.TxIndex,
 		LastSync: time.Now().UTC(),
 		Location: locationFromIPResp(ipResp),
 	}
@@ -105,7 +105,7 @@ func (c *Crawler) CrawlNode(nodeAddr string) {
 		return
 	}
 
-	if err := c.db.Set([]byte(nodeAddr), bz); err != nil {
+	if err := c.db.Set(NodeKey(nodeAddr), bz); err != nil {
 		log.Info().Err(err).Str("node", nodeAddr).Msg("failed to persist node")
 	}
 
@@ -113,7 +113,7 @@ func (c *Crawler) CrawlNode(nodeAddr string) {
 }
 
 func (c *Crawler) removeNodeIfExist(nodeAddr string) {
-	nodeKey := []byte(nodeAddr)
+	nodeKey := NodeKey(nodeAddr)
 	if c.db.Has(nodeKey) {
 		bz, _ := c.db.Get(nodeKey)
 
