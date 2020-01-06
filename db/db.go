@@ -1,15 +1,9 @@
 package db
 
 import (
-	"bytes"
-	"fmt"
 	"path/filepath"
 
-	"github.com/boltdb/bolt"
-)
-
-var (
-	nodesBucket = []byte("NODES")
+	badger "github.com/dgraph-io/badger"
 )
 
 type (
@@ -23,82 +17,77 @@ type (
 		Close() error
 	}
 
-	// BoltDB defines a wrapper type around a Bolt DB that implements the DB
+	// BadgerDB defines a wrapper type around a Badger DB that implements the DB
 	// interface. It mainly provides transaction abstractions.
-	BoltDB struct {
-		db *bolt.DB
+	BadgerDB struct {
+		db *badger.DB
 	}
 )
 
-// NewBoltDB returns a wrapper around a Bolt DB that implements the DB interface.
-// It will create all the necessary Bolt DB buckets if they don't already exist.
-func NewBoltDB(dataDir, dbName string, dbOpts *bolt.Options) (DB, error) {
+// NewBadgerDB returns a wrapper around a Badger DB that implements the DB interface.
+// It will create all the necessary Badger DB buckets if they don't already exist.
+func NewBadgerDB(dataDir, dbName string) (DB, error) {
 	dbPath := filepath.Join(dataDir, dbName)
-	db, err := bolt.Open(dbPath, 0600, dbOpts)
+	db, err := badger.Open(badger.DefaultOptions(dbPath))
 	if err != nil {
 		return nil, err
 	}
 
-	err = db.Update(func(tx *bolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists(nodesBucket)
-		if err != nil {
-			return fmt.Errorf("failed to create bucket: %w", err)
-		}
-
-		return nil
-	})
-
-	return &BoltDB{db: db}, err
+	return &BadgerDB{db: db}, err
 }
 
-// Get returns a value for a given key. An error will never be returned as
-// gauranteed by the Bolt DB semantics.
-func (bdb *BoltDB) Get(key []byte) (value []byte, err error) {
-	err = bdb.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket(nodesBucket)
-		v := b.Get(key)
+// Get returns a value for a given key. It returns badger.ErrKeyNotFound if the
+// value is not found.
+func (bdb *BadgerDB) Get(key []byte) (value []byte, err error) {
+	err = bdb.db.View(func(tx *badger.Txn) error {
+		item, err := tx.Get(key)
+		if err != nil {
+			return err
+		}
 
-		copy(value, v)
-		return nil
+		value, err = item.ValueCopy(nil)
+		return err
 	})
 
 	return value, err
 }
 
-// Has returns a boolean determining if the underlying Bolt DB has a given key
+// Has returns a boolean determining if the underlying Badger DB has a given key
 // or not.
-func (bdb *BoltDB) Has(key []byte) bool {
+func (bdb *BadgerDB) Has(key []byte) bool {
 	v, err := bdb.Get(key)
 	return v != nil && err == nil
 }
 
-// Set attempts to set a key/value pair into Bolt DB returning an error upon
+// Set attempts to set a key/value pair into Badger DB returning an error upon
 // failure.
-func (bdb *BoltDB) Set(key, value []byte) error {
-	return bdb.db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(nodesBucket)
-		return b.Put(key, value)
+func (bdb *BadgerDB) Set(key, value []byte) error {
+	return bdb.db.Update(func(tx *badger.Txn) error {
+		return tx.SetEntry(badger.NewEntry(key, value))
 	})
 }
 
-// Delete attempts to remove a value by key from Bolt DB returning an error
+// Delete attempts to remove a value by key from Badger DB returning an error
 // upon failure.
-func (bdb *BoltDB) Delete(key []byte) error {
-	return bdb.db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(nodesBucket)
-		return b.Delete(key)
+func (bdb *BadgerDB) Delete(key []byte) error {
+	return bdb.db.Update(func(tx *badger.Txn) error {
+		return tx.Delete(key)
 	})
 }
 
 // IteratePrefix iterates over a series of key/value pairs where each key contains
 // the provided prefix. For each key/value pair, a cb function is invoked. If
 // cb returns true, iteration is halted.
-func (bdb *BoltDB) IteratePrefix(prefix []byte, cb func(k, v []byte) bool) {
-	_ = bdb.db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(nodesBucket)
-		c := b.Cursor()
+func (bdb *BadgerDB) IteratePrefix(prefix []byte, cb func(k, v []byte) bool) {
+	_ = bdb.db.Update(func(tx *badger.Txn) error {
+		it := tx.NewIterator(badger.DefaultIteratorOptions)
+		defer it.Close()
 
-		for k, v := c.Seek(prefix); k != nil && bytes.HasPrefix(k, prefix); k, v = c.Next() {
+		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+			item := it.Item()
+			k := item.Key()
+			v, _ := item.ValueCopy(nil)
+
 			if cb(k, v) {
 				return nil
 			}
@@ -108,7 +97,7 @@ func (bdb *BoltDB) IteratePrefix(prefix []byte, cb func(k, v []byte) bool) {
 	})
 }
 
-// Close closes the Bolt DB instance and returns an error upon failure.
-func (bdb *BoltDB) Close() error {
+// Close closes the Badger DB instance and returns an error upon failure.
+func (bdb *BadgerDB) Close() error {
 	return bdb.db.Close()
 }
