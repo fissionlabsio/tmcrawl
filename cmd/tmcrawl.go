@@ -34,7 +34,14 @@ var rootCmd = &cobra.Command{
 	Long: `tmcrawl implements a Tendermint p2p network crawler utility and API.
 
 The utility will capture geolocation information and node metadata such as network
-name, node version, RPC information, and node ID for each crawled node.`,
+name, node version, RPC information, and node ID for each crawled node. The utility
+will first start with a set of seeds and attempt to crawl as many nodes as possible
+from those seeds. When there are no nodes left to crawl, tmcrawl will pick a random
+node from the known list of nodes to reseed the crawl every 'crawl_interval' seconds
+from the last attempted crawl finish.
+
+Nodes will also be periodically checked every 'recheck_interval'. If any node cannot
+be reached, it'll be removed from the known set of nodes.`,
 	RunE: tmcrawlCmdHandler,
 }
 
