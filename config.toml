@@ -1,0 +1,6 @@
+data_dir = "$HOME/.tmcrawl"
+listen_addr = "0.0.0.0:27758"
+seeds = []
+ipstack_key = "<ACCESS_KEY>"
+crawl_interval = 15
+recheck_interval = 43200
