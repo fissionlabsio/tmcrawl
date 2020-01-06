@@ -6,12 +6,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/boltdb/bolt"
 	"github.com/fissionlabsio/tmcrawl/config"
 	"github.com/fissionlabsio/tmcrawl/crawl"
 	"github.com/fissionlabsio/tmcrawl/db"
 	"github.com/fissionlabsio/tmcrawl/server"
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -92,7 +92,7 @@ func tmcrawlCmdHandler(cmd *cobra.Command, args []string) error {
 	}
 
 	// create and open key/value DB
-	db, err := db.NewBoltDB(cfg.DataDir, "tmcrawl.db", &bolt.Options{Timeout: 15 * time.Second})
+	db, err := db.NewBadgerDB(cfg.DataDir, "tmcrawl.db")
 	if err != nil {
 		return err
 	}
@@ -103,10 +103,13 @@ func tmcrawlCmdHandler(cmd *cobra.Command, args []string) error {
 
 	// create HTTP router and mount routes
 	router := mux.NewRouter()
+	c := cors.New(cors.Options{
+		AllowedOrigins: []string{"*"},
+	})
 	server.RegisterRoutes(db, router)
 
 	srv := &http.Server{
-		Handler:      router,
+		Handler:      c.Handler(router),
 		Addr:         cfg.ListenAddr,
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
