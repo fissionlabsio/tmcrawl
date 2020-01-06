@@ -6,13 +6,17 @@ import (
 	"github.com/vmihailenco/msgpack/v4"
 )
 
-// NodeKeyPrefix defines the DB prefix under which nodes are persisted.
-var NodeKeyPrefix = []byte("node/")
+// Node persistence prefix keys
+var (
+	NodeKeyPrefix     = []byte("node/")
+	LocationKeyPrefix = []byte("location/")
+)
 
 type (
 	// Node represents a full-node in a Tendermint-based network that contains
 	// relevant p2p data.
 	Node struct {
+		Address  string    `json:"address" yaml:"address"`
 		RemoteIP string    `json:"remote_ip" yaml:"remote_ip"`
 		RPCPort  string    `json:"rpc_port" yaml:"rpc_port"`
 		Moniker  string    `json:"moniker" yaml:"moniker"`
@@ -34,7 +38,7 @@ type (
 	}
 )
 
-// Marshal returns the MessagePack encoding of a node.
+// Marshal returns the MessagePack encoding of a Node.
 func (n Node) Marshal() ([]byte, error) {
 	bz, err := msgpack.Marshal(n)
 	if err != nil {
@@ -44,7 +48,7 @@ func (n Node) Marshal() ([]byte, error) {
 	return bz, nil
 }
 
-// Unmarshal unmarshals a MessagePack encoding of a node.
+// Unmarshal unmarshals a MessagePack encoding of a Node.
 func (n *Node) Unmarshal(bz []byte) error {
 	if err := msgpack.Unmarshal(bz, n); err != nil {
 		return err
@@ -53,7 +57,31 @@ func (n *Node) Unmarshal(bz []byte) error {
 	return nil
 }
 
+// Marshal returns the MessagePack encoding of a Location.
+func (l Location) Marshal() ([]byte, error) {
+	bz, err := msgpack.Marshal(l)
+	if err != nil {
+		return nil, err
+	}
+
+	return bz, nil
+}
+
+// Unmarshal unmarshals a MessagePack encoding of a Location.
+func (l *Location) Unmarshal(bz []byte) error {
+	if err := msgpack.Unmarshal(bz, l); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // NodeKey constructs the DB key for node persistence.
-func NodeKey(nodeAddr string) []byte {
-	return append(NodeKeyPrefix, []byte(nodeAddr)...)
+func NodeKey(nodeID string) []byte {
+	return append(NodeKeyPrefix, []byte(nodeID)...)
+}
+
+// LocationKey constructs the DB key for location persistence/caching.
+func LocationKey(ip string) []byte {
+	return append(LocationKeyPrefix, []byte(ip)...)
 }

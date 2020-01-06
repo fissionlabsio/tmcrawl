@@ -1,12 +1,18 @@
 package crawl
 
-// TODO: ...
+// NodePool implements an abstraction over a pool of nodes for which to crawl.
+// Note, it is not thread-safe.
 type NodePool struct {
 	nodes map[string]struct{}
 }
 
 func NewNodePool() *NodePool {
 	return &NodePool{nodes: make(map[string]struct{})}
+}
+
+// Size returns the size of the pool.
+func (p *NodePool) Size() int {
+	return len(p.nodes)
 }
 
 // Seed seeds the node pool with a given set of node IPs.
@@ -16,7 +22,7 @@ func (p *NodePool) Seed(seeds []string) {
 	}
 }
 
-// TODO:
+// RandomNode returns a random node, based on Golang's map semantics, from the pool.
 func (p *NodePool) RandomNode() (string, bool) {
 	for nodeIP := range p.nodes {
 		return nodeIP, true
