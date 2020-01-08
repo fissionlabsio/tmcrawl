@@ -1,5 +1,8 @@
 # tmcrawl
 
+[![Build Status](https://travis-ci.org/fissionlabsio/tmcrawl.svg?branch=master)](https://travis-ci.org/fissionlabsio/tmcrawl)
+[![Go Report Card](https://goreportcard.com/badge/github.com/fissionlabsio/tmcrawl)](https://goreportcard.com/report/github.com/fissionlabsio/tmcrawl)
+
 > A Tendermint p2p crawling utility and API.
 
 The `tmcrawl` utility will capture geolocation information and node metadata such as network
