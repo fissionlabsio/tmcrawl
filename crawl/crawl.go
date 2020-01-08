@@ -83,11 +83,13 @@ func (c *Crawler) CrawlNode(nodeAddr string) {
 	}
 
 	for _, p := range netInfo.Peers {
+		peerID := string(p.NodeInfo.ID())
 		port := parsePort(p.NodeInfo.Other.RPCAddress)
 		peer := fmt.Sprintf("http://%s:%s", p.RemoteIP, port)
 
 		// only add peer to the pool if we haven't (re)discovered it
-		if !c.db.Has([]byte(peer)) {
+		if !c.db.Has(NodeKey(peerID)) {
+			log.Debug().Str("peer_address", peer).Str("peer_id", peerID).Msg("adding peer to node pool")
 			c.pool.AddNode(peer)
 		}
 	}
