@@ -3,7 +3,7 @@ package db
 import (
 	"path/filepath"
 
-	badger "github.com/dgraph-io/badger"
+	badger "github.com/dgraph-io/badger/v2"
 )
 
 type (
@@ -29,6 +29,18 @@ type (
 func NewBadgerDB(dataDir, dbName string) (DB, error) {
 	dbPath := filepath.Join(dataDir, dbName)
 	db, err := badger.Open(badger.DefaultOptions(dbPath))
+	if err != nil {
+		return nil, err
+	}
+
+	return &BadgerDB{db: db}, err
+}
+
+// NewBadgerMemDB return a pure in-memory Badger DB instance that implements the
+// DB interface. Data is stored only in-memory and should be used for testing
+// purposes only.
+func NewBadgerMemDB() (DB, error) {
+	db, err := badger.Open(badger.DefaultOptions("").WithInMemory(true))
 	if err != nil {
 		return nil, err
 	}
