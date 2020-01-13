@@ -1,8 +1,6 @@
 package crawl
 
 import (
-	"time"
-
 	"github.com/vmihailenco/msgpack/v4"
 )
 
@@ -16,16 +14,16 @@ type (
 	// Node represents a full-node in a Tendermint-based network that contains
 	// relevant p2p data.
 	Node struct {
-		Address  string    `json:"address" yaml:"address"`
-		RemoteIP string    `json:"remote_ip" yaml:"remote_ip"`
-		RPCPort  string    `json:"rpc_port" yaml:"rpc_port"`
-		Moniker  string    `json:"moniker" yaml:"moniker"`
-		ID       string    `json:"id" yaml:"id"`
-		Network  string    `json:"network" yaml:"network"`
-		Version  string    `json:"version" yaml:"version"`
-		TxIndex  string    `json:"tx_index" yaml:"tx_index"`
-		LastSync time.Time `json:"last_sync" yaml:"last_sync"`
-		Location Location  `json:"location" yaml:"location"`
+		Address  string   `json:"address" yaml:"address"`
+		RPCPort  string   `json:"rpc_port" yaml:"rpc_port"`
+		P2PPort  string   `json:"p2p_port" yaml:"p2p_port"`
+		Moniker  string   `json:"moniker" yaml:"moniker"`
+		ID       string   `json:"id" yaml:"id"`
+		Network  string   `json:"network" yaml:"network"`
+		Version  string   `json:"version" yaml:"version"`
+		TxIndex  string   `json:"tx_index" yaml:"tx_index"`
+		LastSync string   `json:"last_sync" yaml:"last_sync"`
+		Location Location `json:"location" yaml:"location"`
 	}
 
 	// Location defines geolocation information of a Tendermint node.
@@ -37,6 +35,11 @@ type (
 		Longitude string `json:"longitude" yaml:"longitude"`
 	}
 )
+
+// Key returns the addressable persistence key of a Node.
+func (n Node) Key() []byte {
+	return NodeKey(n.Address)
+}
 
 // Marshal returns the MessagePack encoding of a Node.
 func (n Node) Marshal() ([]byte, error) {
@@ -77,11 +80,11 @@ func (l *Location) Unmarshal(bz []byte) error {
 }
 
 // NodeKey constructs the DB key for node persistence.
-func NodeKey(nodeID string) []byte {
-	return append(NodeKeyPrefix, []byte(nodeID)...)
+func NodeKey(addressable string) []byte {
+	return append(NodeKeyPrefix, []byte(addressable)...)
 }
 
 // LocationKey constructs the DB key for location persistence/caching.
-func LocationKey(ip string) []byte {
-	return append(LocationKeyPrefix, []byte(ip)...)
+func LocationKey(addressable string) []byte {
+	return append(LocationKeyPrefix, []byte(addressable)...)
 }

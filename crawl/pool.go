@@ -37,36 +37,36 @@ func (p *NodePool) Seed(seeds []string) {
 
 // RandomNode returns a random node, based on Golang's map semantics, from the pool.
 func (p *NodePool) RandomNode() (string, bool) {
-	for nodeIP := range p.nodes {
-		return nodeIP, true
+	for nodeRPCAddr := range p.nodes {
+		return nodeRPCAddr, true
 	}
 
 	return "", false
 }
 
-// AddNode adds a node IP to the node pool. In addition, it adds the node to the
-// reseed list. If the reseed list is full, it replaces a random node.
-func (p *NodePool) AddNode(nodeIP string) {
-	p.nodes[nodeIP] = struct{}{}
+// AddNode adds a node RPC address to the node pool. In addition, it adds the
+// node to the reseed list. If the reseed list is full, it replaces a random node.
+func (p *NodePool) AddNode(nodeRPCAddr string) {
+	p.nodes[nodeRPCAddr] = struct{}{}
 
 	if len(p.reseedNodes) < cap(p.reseedNodes) {
-		p.reseedNodes = append(p.reseedNodes, nodeIP)
+		p.reseedNodes = append(p.reseedNodes, nodeRPCAddr)
 	} else {
 		// replace random node with the new node
 		i := p.rng.Intn(len(p.reseedNodes))
-		p.reseedNodes[i] = nodeIP
+		p.reseedNodes[i] = nodeRPCAddr
 	}
 }
 
-// HasNode returns a boolean based on if a node IP exists in the node pool.
-func (p *NodePool) HasNode(nodeIP string) bool {
-	_, ok := p.nodes[nodeIP]
+// HasNode returns a boolean based on if a node RPC address exists in the node pool.
+func (p *NodePool) HasNode(nodeRPCAddr string) bool {
+	_, ok := p.nodes[nodeRPCAddr]
 	return ok
 }
 
 // DeleteNode removes a node from the node pool if it exists.
-func (p *NodePool) DeleteNode(nodeIP string) {
-	delete(p.nodes, nodeIP)
+func (p *NodePool) DeleteNode(nodeRPCAddr string) {
+	delete(p.nodes, nodeRPCAddr)
 }
 
 // Reseed seeds the node pool with all the nodes found in the internal reseed

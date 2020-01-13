@@ -10,6 +10,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const defaultP2PPort = "26656"
+
 // Crawler implements the Tendermint p2p network crawler.
 type Crawler struct {
 	db       db.DB
@@ -43,12 +45,12 @@ func (c *Crawler) Crawl() {
 	c.pool.Seed(c.seeds)
 
 	for {
-		nodeAddr, ok := c.pool.RandomNode()
+		nodeRPCAddr, ok := c.pool.RandomNode()
 		for ok {
-			c.CrawlNode(nodeAddr)
-			c.pool.DeleteNode(nodeAddr)
+			c.CrawlNode(nodeRPCAddr)
+			c.pool.DeleteNode(nodeRPCAddr)
 
-			nodeAddr, ok = c.pool.RandomNode()
+			nodeRPCAddr, ok = c.pool.RandomNode()
 		}
 
 		log.Info().Uint("duration", c.crawlInterval).Msg("waiting until next crawl attempt...")
@@ -57,92 +59,117 @@ func (c *Crawler) Crawl() {
 	}
 }
 
-// CrawlNode attempts to lookup a node's status and network info by it's node RPC
-// address. Upon success, it will add all of its peers to the node pool if they
-// do not already exist in the DB. If the node's status cannot be queried, it will
-// be removed from the DB if it exists.
-func (c *Crawler) CrawlNode(nodeAddr string) {
-	client := newRPCClient(nodeAddr)
+// CrawlNode performs the main crawling functionality for a Tendermint node. It
+// accepts a node RPC address and attempts to ping that node's P2P address by
+// using the RPC address and the default P2P port of 26656. If the P2P address
+// cannot be reached, the node is deleted if it exists in the database. Otherwise,
+// we attempt to get additional metadata aboout the node via it's RPC address
+// and its set of peers. For every peer that doesn't exist in the node pool, it
+// is added.
+func (c *Crawler) CrawlNode(nodeRPCAddr string) {
+	host := parseHostname(nodeRPCAddr)
+	nodeP2PAddr := fmt.Sprintf("%s:%s", host, defaultP2PPort)
+
+	node := Node{
+		Address:  host,
+		RPCPort:  parsePort(nodeRPCAddr),
+		P2PPort:  defaultP2PPort,
+		LastSync: time.Now().UTC().Format(time.RFC3339),
+	}
+
+	log.Debug().Str("p2p_address", nodeP2PAddr).Str("rpc_address", nodeRPCAddr).Msg("pinging node...")
+	if ok := PingAddress(nodeP2PAddr, 5); !ok {
+		log.Info().Str("p2p_address", nodeP2PAddr).Str("rpc_address", nodeRPCAddr).Msg("failed to ping node; deleting...")
+
+		if err := c.DeleteNodeIfExist(node); err != nil {
+			log.Info().Err(err).Str("p2p_address", nodeP2PAddr).Str("rpc_address", nodeRPCAddr).Msg("failed to delete node")
+		}
+
+		return
+	}
+
+	loc, err := c.GetGeolocation(host)
+	if err != nil {
+		log.Info().Err(err).Str("p2p_address", nodeP2PAddr).Str("rpc_address", nodeRPCAddr).Msg("failed to get node geolocation")
+	} else {
+		node.Location = loc
+	}
+
+	client := newRPCClient(nodeRPCAddr)
 
 	status, err := client.Status()
 	if err != nil {
-		log.Info().Err(err).Str("node_address", nodeAddr).Msg("failed to get node status; removing")
-		if err := c.deleteNodeIfExist(nodeAddr); err != nil {
-			log.Info().Err(err).Str("node_address", nodeAddr).Msg("failed to delete node")
+		log.Info().Err(err).Str("p2p_address", nodeP2PAddr).Str("rpc_address", nodeRPCAddr).Msg("failed to get node status")
+	} else {
+		node.Moniker = status.NodeInfo.Moniker
+		node.ID = string(status.NodeInfo.ID())
+		node.Network = status.NodeInfo.Network
+		node.Version = status.NodeInfo.Version
+		node.TxIndex = status.NodeInfo.Other.TxIndex
+
+		netInfo, err := client.NetInfo()
+		if err != nil {
+			log.Info().Err(err).Str("p2p_address", nodeP2PAddr).Str("rpc_address", nodeRPCAddr).Msg("failed to get node net info")
+			return
 		}
 
-		return
-	}
+		for _, p := range netInfo.Peers {
+			peerRPCPort := parsePort(p.NodeInfo.Other.RPCAddress)
+			peerRPCAddress := fmt.Sprintf("http://%s:%s", p.RemoteIP, peerRPCPort)
+			peer := Node{
+				Address: p.RemoteIP,
+			}
 
-	nodeID := string(status.NodeInfo.ID())
-
-	netInfo, err := client.NetInfo()
-	if err != nil {
-		log.Info().Err(err).Str("node_address", nodeAddr).Str("node_id", nodeID).Msg("failed to get node net info")
-		return
-	}
-
-	for _, p := range netInfo.Peers {
-		peerID := string(p.NodeInfo.ID())
-		port := parsePort(p.NodeInfo.Other.RPCAddress)
-		peer := fmt.Sprintf("http://%s:%s", p.RemoteIP, port)
-
-		// only add peer to the pool if we haven't (re)discovered it
-		if !c.db.Has(NodeKey(peerID)) {
-			log.Debug().Str("peer_address", peer).Str("peer_id", peerID).Msg("adding peer to node pool")
-			c.pool.AddNode(peer)
+			// only add peer to the pool if we haven't (re)discovered it
+			if !c.db.Has(peer.Key()) {
+				log.Debug().Str("p2p_address", nodeP2PAddr).Str("rpc_address", nodeRPCAddr).Str("peer_rpc_address", peerRPCAddress).Msg("adding peer to node pool")
+				c.pool.AddNode(peerRPCAddress)
+			}
 		}
 	}
 
-	nodeIP := parseHostname(nodeAddr)
-	loc, err := c.getGeolocation(nodeIP)
-	if err != nil {
-		log.Info().Err(err).Str("node_address", nodeAddr).Str("node_id", nodeID).Msg("failed to get node geolocation info")
-		return
+	if err := c.SaveNode(node); err != nil {
+		log.Info().Err(err).Str("p2p_address", nodeP2PAddr).Str("rpc_address", nodeRPCAddr).Msg("failed to encode node")
+	} else {
+		log.Info().Str("p2p_address", nodeP2PAddr).Str("rpc_address", nodeRPCAddr).Msg("successfully crawled and persisted node")
 	}
-
-	node := Node{
-		Address:  nodeAddr,
-		RemoteIP: nodeIP,
-		RPCPort:  parsePort(nodeAddr),
-		Moniker:  status.NodeInfo.Moniker,
-		ID:       nodeID,
-		Network:  status.NodeInfo.Network,
-		Version:  status.NodeInfo.Version,
-		TxIndex:  status.NodeInfo.Other.TxIndex,
-		LastSync: time.Now().UTC(),
-		Location: loc,
-	}
-	c.saveNode(node)
 }
 
-func (c *Crawler) saveNode(n Node) {
+// SaveNode persists a node to the database by it's addressable key. An error is
+// returned if it cannot be marshaled or the database operation fails.
+func (c *Crawler) SaveNode(n Node) error {
 	bz, err := n.Marshal()
 	if err != nil {
-		log.Info().Err(err).Str("node_address", n.Address).Str("node_id", n.ID).Msg("failed to encode node")
-		return
+		return err
 	}
 
-	if err := c.db.Set(NodeKey(n.ID), bz); err != nil {
-		log.Info().Err(err).Str("node_address", n.Address).Str("node_id", n.ID).Msg("failed to persist node")
-	}
-
-	log.Info().Str("node_address", n.Address).Str("node_id", n.ID).Msg("successfully crawled and persisted node")
-}
-
-func (c *Crawler) deleteNodeIfExist(nodeAddr string) error {
-	nodeKey := NodeKey(nodeAddr)
-	if c.db.Has(nodeKey) {
-		return c.db.Delete(nodeKey)
+	if err := c.db.Set(n.Key(), bz); err != nil {
+		return err
 	}
 
 	return nil
 }
 
-func (c *Crawler) getGeolocation(nodeIP string) (Location, error) {
+// DeleteNodeIfExist removes a node by it's addressable key from the database
+// if it exists. An error is returned if it exists and cannot be deleted.
+func (c *Crawler) DeleteNodeIfExist(n Node) error {
+	key := n.Key()
+	if c.db.Has(key) {
+		return c.db.Delete(key)
+	}
+
+	return nil
+}
+
+// GetGeolocation returns a Location object containing geolocation information
+// for a given node IP. It will first check to see if the location already exists
+// in the database and return it if so. Otherwise, a query is made against IPStack
+// and persisted. An error is returned if the location cannot be decoded or queried
+// for.
+func (c *Crawler) GetGeolocation(nodeIP string) (Location, error) {
 	locKey := LocationKey(nodeIP)
 
-	// attempt to query for location in the DB first
+	// return location if it exists in the database
 	if c.db.Has(locKey) {
 		bz, err := c.db.Get(locKey)
 		if err != nil {

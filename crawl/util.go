@@ -2,6 +2,7 @@ package crawl
 
 import (
 	"fmt"
+	"net"
 	"net/url"
 	"time"
 
@@ -44,4 +45,16 @@ func locationFromIPResp(r *ipstack.Response) Location {
 		Latitude:  fmt.Sprintf("%f", r.Latitude),
 		Longitude: fmt.Sprintf("%f", r.Longitude),
 	}
+}
+
+// PingAddress attempts to ping a P2P Tendermint address returning true if the
+// node is reachable and false otherwise.
+func PingAddress(address string, t int64) bool {
+	conn, err := net.DialTimeout("tcp", address, time.Duration(t)*time.Second)
+	if err != nil {
+		return false
+	}
+
+	defer conn.Close()
+	return true
 }
