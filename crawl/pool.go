@@ -72,5 +72,7 @@ func (p *NodePool) DeleteNode(nodeRPCAddr string) {
 // Reseed seeds the node pool with all the nodes found in the internal reseed
 // list.
 func (p *NodePool) Reseed() {
-	p.Seed(p.reseedNodes)
+	for _, addr := range p.reseedNodes {
+		p.nodes[addr] = struct{}{}
+	}
 }
