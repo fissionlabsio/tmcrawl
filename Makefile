@@ -55,4 +55,7 @@ clean:
 swagger:
 	@swag init --generatedTime=false -g server/swagger.go --output=server/docs
 
+swagger-verify:
+	@scripts/swag.sh
+
 .PHONY: install build ci-test ci-lint swagger coverage clean
