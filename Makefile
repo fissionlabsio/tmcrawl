@@ -4,7 +4,7 @@ COMMIT  := $(shell git log -1 --format='%H')
 all: ci-lint ci-test install
 
 ###############################################################################
-# Build / Install
+#                               Build / Install                               #
 ###############################################################################
 
 LD_FLAGS = -X github.com/fissionlabsio/tmcrawl/cmd.Version=$(VERSION) \
@@ -26,7 +26,7 @@ install: go.sum
 	@go install -mod=readonly $(BUILD_FLAGS) .
 
 ###############################################################################
-# Tests / CI
+#                                 Tests / CI                                  #
 ###############################################################################
 
 coverage:
@@ -48,4 +48,11 @@ ci-lint:
 clean:
 	rm -f tools-stamp ./build/**
 
-.PHONY: install build ci-test ci-lint tools coverage clean
+###############################################################################
+#                                   Docs                                      #
+###############################################################################
+
+swagger:
+	@swag init -g server/swagger.go --output server/docs
+
+.PHONY: install build ci-test ci-lint swagger coverage clean
