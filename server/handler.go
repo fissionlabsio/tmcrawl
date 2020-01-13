@@ -117,10 +117,10 @@ func getNodesHandler(db db.DB) http.HandlerFunc {
 }
 
 // @Summary Get node
-// @Description Get node by node ID.
+// @Description Get node by address.
 // @Tags nodes
 // @Produce json
-// @Param nodeID path string true "The node ID"
+// @Param nodeID path string true "The node address (IP or resolvable to IP)"
 // @Success 200 {object} crawl.Node
 // @Failure 400 {object} server.ErrorResponse "Failure to parse the node"
 // @Failure 404 {object} server.ErrorResponse "Failure to find the node"

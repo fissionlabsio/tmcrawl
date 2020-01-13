@@ -28,7 +28,7 @@ definitions:
         type: string
       network:
         type: string
-      remote_ip:
+      p2p_port:
         type: string
       rpc_port:
         type: string
@@ -95,9 +95,9 @@ paths:
       - nodes
   /nodes/{nodeID}:
     get:
-      description: Get node by node RPC address.
+      description: Get node by address.
       parameters:
-      - description: The node RPC address
+      - description: The node address (IP or resolvable to IP)
         in: path
         name: nodeID
         required: true

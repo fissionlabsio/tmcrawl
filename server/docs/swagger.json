@@ -58,7 +58,7 @@
         },
         "/nodes/{nodeID}": {
             "get": {
-                "description": "Get node by node RPC address.",
+                "description": "Get node by address.",
                 "produces": [
                     "application/json"
                 ],
@@ -69,7 +69,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "The node RPC address",
+                        "description": "The node address (IP or resolvable to IP)",
                         "name": "nodeID",
                         "in": "path",
                         "required": true
@@ -141,7 +141,7 @@
                 "network": {
                     "type": "string"
                 },
-                "remote_ip": {
+                "p2p_port": {
                     "type": "string"
                 },
                 "rpc_port": {
