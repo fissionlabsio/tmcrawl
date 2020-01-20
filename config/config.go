@@ -8,14 +8,13 @@ import (
 	"path/filepath"
 
 	"github.com/BurntSushi/toml"
+	"github.com/go-playground/validator/v10"
 )
 
-// Configuration sentinel errors
-var (
-	ErrEmptyConfigPath = errors.New("empty configuration file path")
-	ErrNoIPStackKey    = errors.New("no ipstack access key provided in configuration")
-	ErrNoSeeds         = errors.New("no seeds provided in configuration")
-)
+var validate *validator.Validate = validator.New()
+
+// ErrEmptyConfigPath defines a sentinel error for an empty config path.
+var ErrEmptyConfigPath = errors.New("empty configuration file path")
 
 var (
 	defaultListenAddr           = "0.0.0.0:27758"
@@ -28,12 +27,17 @@ var (
 type Config struct {
 	DataDir    string   `toml:"data_dir"`
 	ListenAddr string   `toml:"listen_addr"`
-	Seeds      []string `toml:"seeds"`
+	Seeds      []string `toml:"seeds" validate:"required,min=1"`
 	ReseedSize uint     `toml:"reseed_size"`
-	IPStackKey string   `toml:"ipstack_key"`
+	IPStackKey string   `toml:"ipstack_key" validate:"required,min=1"`
 
 	CrawlInterval   uint `toml:"crawl_interval"`
 	RecheckInterval uint `toml:"recheck_interval"`
+}
+
+// Validate returns an error if the Config object is invalid.
+func (c Config) Validate() error {
+	return validate.Struct(c)
 }
 
 // ParseConfig attempts to read and parse a tmcrawl config from the given file
@@ -54,12 +58,6 @@ func ParseConfig(configPath string) (Config, error) {
 		return cfg, fmt.Errorf("failed to decode config: %w", err)
 	}
 
-	if len(cfg.Seeds) == 0 {
-		return cfg, ErrNoSeeds
-	}
-	if cfg.IPStackKey == "" {
-		return cfg, ErrNoIPStackKey
-	}
 	if cfg.ListenAddr == "" {
 		cfg.ListenAddr = defaultListenAddr
 	}
@@ -76,5 +74,5 @@ func ParseConfig(configPath string) (Config, error) {
 		cfg.DataDir = filepath.Join(os.Getenv("HOME"), ".tmcrawl")
 	}
 
-	return cfg, nil
+	return cfg, cfg.Validate()
 }
