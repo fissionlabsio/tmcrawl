@@ -52,9 +52,8 @@ All API documentation is hosted via Swagger UI under path `/swagger/`.
 
 ## Future Improvements
 
-- Unit and integration tests
+- Crawl integration tests
 - Front-end visualization
-- Cleaner config validation
 
 ## Contributing
 
