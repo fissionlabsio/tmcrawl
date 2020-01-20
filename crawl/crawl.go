@@ -44,6 +44,8 @@ func (c *Crawler) Crawl() {
 	// seed the pool with the initial set of seeds before crawling
 	c.pool.Seed(c.seeds)
 
+	go c.RecheckNodes()
+
 	for {
 		nodeRPCAddr, ok := c.pool.RandomNode()
 		for ok {
@@ -133,6 +135,66 @@ func (c *Crawler) CrawlNode(nodeRPCAddr string) {
 	} else {
 		log.Info().Str("p2p_address", nodeP2PAddr).Str("rpc_address", nodeRPCAddr).Msg("successfully crawled and persisted node")
 	}
+}
+
+// RecheckNodes starts a blocking process where every recheckInterval seconds
+// the crawler checks for all stale nodes that need to be rechecked. For each
+// stale node, the node is added back into the node pool to be re-crawled and
+// updated (or removed).
+func (c *Crawler) RecheckNodes() {
+	ticker := time.NewTicker(time.Duration(c.recheckInterval) * time.Second)
+
+	for range ticker.C {
+		now := time.Now().UTC()
+		log.Info().Str("time", now.Format(time.RFC3339)).Msg("rechecking nodes...")
+
+		nodes, err := c.GetStaleNodes(now)
+		if err != nil {
+			log.Info().Err(err).Msg("failed to get all stale nodes")
+			continue
+		}
+
+		for _, node := range nodes {
+			nodeP2PAddr := fmt.Sprintf("%s:%s", node.Address, node.P2PPort)
+			nodeRPCAddr := fmt.Sprintf("http://%s:%s", node.Address, node.RPCPort)
+
+			log.Debug().Str("p2p_address", nodeP2PAddr).Str("rpc_address", nodeRPCAddr).Msg("adding node to node pool")
+			c.pool.AddNode(nodeRPCAddr)
+		}
+	}
+}
+
+// GetStaleNodes returns all persisted nodes from that database that have a
+// LastSync time that is older than the provided time.
+//
+// NOTE: We currently query for all nodes and for each node we check the LastSync
+// value. This should ideally be improved in case the node set size is
+// substantially large. It may require thinking the persistence interface.
+func (c *Crawler) GetStaleNodes(t time.Time) ([]Node, error) {
+	nodes := []Node{}
+
+	var err error
+	c.db.IteratePrefix(NodeKeyPrefix, func(_, v []byte) bool {
+		node := new(Node)
+
+		err = node.Unmarshal(v)
+		if err != nil {
+			return true
+		}
+
+		lastSync, _ := time.Parse(time.RFC3339, node.LastSync)
+		if lastSync.Before(t) {
+			nodes = append(nodes, *node)
+		}
+
+		return false
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return nodes, nil
 }
 
 // SaveNode persists a node to the database by it's addressable key. An error is

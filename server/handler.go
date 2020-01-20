@@ -75,7 +75,7 @@ func getNodesHandler(db db.DB) http.HandlerFunc {
 		var err error
 		db.IteratePrefix(crawl.NodeKeyPrefix, func(_, v []byte) bool {
 			node := new(crawl.Node)
-			err := node.Unmarshal(v)
+			err = node.Unmarshal(v)
 			if err != nil {
 				return true
 			}

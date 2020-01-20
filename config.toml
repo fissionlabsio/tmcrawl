@@ -9,6 +9,9 @@ ipstack_key = ""
 # reseed_size defines the size of the reseed list for which to reseed the node
 # pool after its been exhausted. It is populated by the crawling process.
 reseed_size = 100
-# crawl_interval defines the interval in which to retrigger a crawl after the
-# node pool is exhausted.
+# crawl_interval defines the interval (in seconds) in which to retrigger a crawl
+# after the node pool is exhausted.
 crawl_interval = 15
+# recheck_interval defines the interval (in seconds) in which to recheck nodes
+# for availability.
+recheck_interval = 3600
