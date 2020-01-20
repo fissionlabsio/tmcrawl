@@ -20,7 +20,7 @@ var (
 var (
 	defaultListenAddr           = "0.0.0.0:27758"
 	defaultCrawlInterval   uint = 15
-	defaultRecheckInterval uint = 43200
+	defaultRecheckInterval uint = 3600
 	defaultReseedSize      uint = 100
 )
 
