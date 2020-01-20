@@ -93,13 +93,13 @@ paths:
       summary: Get all nodes
       tags:
       - nodes
-  /nodes/{nodeID}:
+  /nodes/{address}:
     get:
       description: Get node by address.
       parameters:
       - description: The node address (IP or resolvable to IP)
         in: path
-        name: nodeID
+        name: address
         required: true
         type: string
       produces:

@@ -71,7 +71,7 @@ var doc = `{
                 }
             }
         },
-        "/nodes/{nodeID}": {
+        "/nodes/{address}": {
             "get": {
                 "description": "Get node by address.",
                 "produces": [
@@ -85,7 +85,7 @@ var doc = `{
                     {
                         "type": "string",
                         "description": "The node address (IP or resolvable to IP)",
-                        "name": "nodeID",
+                        "name": "address",
                         "in": "path",
                         "required": true
                     }

@@ -21,7 +21,7 @@ const (
 func RegisterRoutes(db db.DB, r *mux.Router) {
 	r.PathPrefix("/swagger/").Handler(httpswagger.WrapHandler)
 	r.HandleFunc("/api/v1/nodes", getNodesHandler(db)).Methods(methodGET)
-	r.HandleFunc("/api/v1/nodes/{nodeID}", getNodeHandler(db)).Methods(methodGET)
+	r.HandleFunc("/api/v1/nodes/{address}", getNodeHandler(db)).Methods(methodGET)
 }
 
 // PaginatedNodesResp defines a paginated search result of nodes.
@@ -120,22 +120,22 @@ func getNodesHandler(db db.DB) http.HandlerFunc {
 // @Description Get node by address.
 // @Tags nodes
 // @Produce json
-// @Param nodeID path string true "The node address (IP or resolvable to IP)"
+// @Param address path string true "The node address (IP or resolvable to IP)"
 // @Success 200 {object} crawl.Node
 // @Failure 400 {object} server.ErrorResponse "Failure to parse the node"
 // @Failure 404 {object} server.ErrorResponse "Failure to find the node"
-// @Router /nodes/{nodeID} [get]
+// @Router /nodes/{address} [get]
 func getNodeHandler(db db.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
-		nodeID := vars["nodeID"]
+		address := vars["address"]
 
-		if !db.Has(crawl.NodeKey(nodeID)) {
-			writeErrorResponse(w, http.StatusNotFound, fmt.Errorf("failed to find node: %s", nodeID))
+		if !db.Has(crawl.NodeKey(address)) {
+			writeErrorResponse(w, http.StatusNotFound, fmt.Errorf("failed to find node: %s", address))
 			return
 		}
 
-		bz, _ := db.Get(crawl.NodeKey(nodeID))
+		bz, _ := db.Get(crawl.NodeKey(address))
 
 		node := new(crawl.Node)
 		if err := node.Unmarshal(bz); err != nil {
