@@ -13,7 +13,7 @@ set of nodes from the known list of nodes to reseed the crawl every `crawl_inter
 seconds from the last attempted crawl finish.
 
 Nodes are persisted in a key/value embedded database, by default BadgerDB. Saved
-nodes will also be periodically checked every `recheck_interval`. If any node
+nodes will also be periodically rechecked every `recheck_interval`. If any node
 cannot be reached, it'll be removed from the known set of nodes.
 
 Note, `tmcrawl` is a Tendermint p2p network crawler, it does not operate as a seed
@@ -53,7 +53,6 @@ All API documentation is hosted via Swagger UI under path `/swagger/`.
 ## Future Improvements
 
 - Unit and integration tests
-- Support `recheck_interval`
 - Front-end visualization
 - Cleaner config validation
 
